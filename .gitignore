@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.spec
+*.egg
+MANIFEST
+
+# 虚拟环境
+venv/
+env/
+.venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 项目敏感数据
+.workbuddy/
+.llm_chat/
+*.log
+.env
+.env.*
+
+# 测试覆盖率
+.coverage
+htmlcov/
+.pytest_cache/
+
+# 临时文件
+*.tmp
+*.bak
+*.backup
+
+# PyInstaller
+*.manifest
+*.exe
+
+# 笔记和文档草稿
+*.md.bak
+*.txt.bak
+
+# 打包产物
+build_dist/
+*.spec
+
+# 运行时临时文件
+temp/
+generated-images/
+
+# ========== 新增 LLM 项目必须屏蔽（你原有缺少）==========
+# 大模型权重文件（体积巨大，严禁提交仓库）
+models/
+*.gguf
+*.bin
+*.safetensors
+*.onnx
+*.pt
+*.pth
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 缓存目录
+cache/
+.cache/
+.codebuddy/

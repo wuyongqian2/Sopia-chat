@@ -1,0 +1,57 @@
+/* ============================================================
+   Skin: Classic — 经典深蓝风格
+   变量定义 + 视觉覆盖（覆盖 style.css 基底默认值）
+   ============================================================ */
+
+/* --- Design Tokens --- */
+:root {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-tertiary: #0f3460;
+    --bg-hover: #1a3050;
+    --bg-input: #162240;
+    --bg-user-bubble: #2563eb;
+    --bg-ai-bubble: #1e2a4a;
+    --bg-code: #0d1117;
+    --bg-modal: #1a1a2e;
+    --bg-modal-overlay: rgba(0, 0, 0, 0.6);
+    --border-color: #2a3a5c;
+    --border-input: #3a4a6c;
+    --text-primary: #e2e8f0;
+    --text-secondary: #a0aec0;
+    --text-muted: #718096;
+    --text-inverse: #ffffff;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --accent-light: rgba(59, 130, 246, 0.15);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-xs: 6px;
+    --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    --header-height: 56px;
+    --transition: 0.2s ease;
+}
+
+/* --- 亮色主题 --- */
+[data-theme="light"] {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #f1f5f9;
+    --bg-tertiary: #e2e8f0;
+    --bg-hover: #e8edf2;
+    --bg-input: #ffffff;
+    --bg-user-bubble: #2563eb;
+    --bg-ai-bubble: #ffffff;
+    --bg-code: #1e293b;
+    --bg-modal: #ffffff;
+    --bg-modal-overlay: rgba(0, 0, 0, 0.4);
+    --border-color: #e2e8f0;
+    --border-input: #cbd5e1;
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --text-inverse: #ffffff;
+    --shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+}

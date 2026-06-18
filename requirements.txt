@@ -1,0 +1,15 @@
+﻿flask==3.1.0
+flask-cors==5.0.1
+flask-login>=0.6.3
+flask-wtf>=1.2.0
+flask-limiter>=3.5.0
+cryptography>=41.0.0
+requests==2.32.3
+waitress>=2.1.0
+pywebview>=5.0
+markitdown
+pdfplumber
+rapidocr-onnxruntime
+tokenizers>=0.15.0
+onnxruntime>=1.17.0
+numpy>=1.24.0
