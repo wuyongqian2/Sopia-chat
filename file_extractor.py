@@ -259,7 +259,7 @@ def _build_result(text, filename, file_id=None, user_id=None, provider="", provi
         preview_text = text[:3000].rstrip()
         return {
             "success": True,
-            "text": f"(文件较大，已分为 {len(chunks)} 个段落，请描述你想了解的内容)",
+            "text": preview_text,
             "filename": filename,
             "is_large": True,
             "document_id": doc_id,
@@ -274,7 +274,7 @@ def _build_result(text, filename, file_id=None, user_id=None, provider="", provi
     preview_text = text[:3000].rstrip()
     return {
         "success": True,
-        "text": f"(文件较大，已分为 {len(chunks)} 个段落，请描述你想了解的内容)",
+        "text": preview_text,
         "filename": filename,
         "is_large": True,
         "file_id": file_id,

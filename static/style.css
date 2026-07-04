@@ -1868,7 +1868,7 @@ body {
 .doc-item-actions {
     display: flex;
     gap: 8px;
-    opacity: 0;
+    opacity: 0.6;
     transition: opacity var(--transition);
 }
 

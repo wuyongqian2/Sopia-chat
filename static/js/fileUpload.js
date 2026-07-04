@@ -84,10 +84,6 @@ async function uploadPendingFiles() {
                         console.warn('Base64 转换失败:', b64Err.message);
                     }
                 }
-
-                if (item.isLarge) {
-                    showToast(`文件 ${item.name} 已分为 ${result.chunk_count} 个段落，请描述你想了解的内容`, 'info');
-                }
             } else {
                 item.status = 'error';
                 showToast(`文件 ${item.name} 解析失败: ${result.error || '未知错误'}`, 'error');
