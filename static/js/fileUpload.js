@@ -1,4 +1,4 @@
-/**
+﻿/**
  * fileUpload.js — 文件上传相关
  * 依赖：state.js (STATE, DOM), utils.js (showToast, getFileTypeClass, getFileIcon, fetchWithTimeout)
  */
@@ -48,16 +48,18 @@ async function uploadPendingFiles() {
 
         const formData = new FormData();
         formData.append('file', item.file);
-        formData.append('persist', 'false');  // 聊天附件不自动入库
 
-        // 原生上传模式：传递 mode 和 provider
+        // 聊天附件走专用端点（只解析全文，不分块入库）
+        // 原生上传模式仍走 /api/upload
+        let uploadUrl = '/api/chat/upload';
         if (STATE.nativeUploadMode && STATE.activeProvider) {
+            uploadUrl = '/api/upload';
             formData.append('mode', 'native');
             formData.append('provider', STATE.activeProvider);
         }
 
         try {
-            const resp = await fetch('/api/upload', {
+            const resp = await fetch(uploadUrl, {
                 method: 'POST',
                 body: formData
             });

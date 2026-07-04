@@ -1,4 +1,4 @@
-/**
+﻿/**
  * state.js — 全局状态 & DOM 引用
  * 最先加载，无外部依赖
  */
@@ -36,7 +36,7 @@ const STATE = {
     drafts: {},
     abortController: null,
     uploadedFiles: [],
-    autoKnowledgeBase: true,  // 是否启用自动知识库检索
+    autoKnowledgeBase: false,  // 是否启用自动知识库检索
     nativeUploadMode: false,   // 是否使用服务商原生文件上传
     currentProviderSupportsNativeUpload: false,  // 当前服务商是否支持原生上传
     settings: {

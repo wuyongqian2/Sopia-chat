@@ -1,4 +1,4 @@
-/**
+﻿/**
  * messageRenderer.js — 消息渲染 & SSE 流式发送
  * 依赖：state.js (STATE, DOM), utils.js (escapeHtml, showToast, scrollToBottom, getFileTypeClass, getFileIcon)
  *        conversationManager.js (saveConversations, prepareMessages, estimateTokens, etc.)
@@ -471,97 +471,15 @@ async function sendMessage() {
     const fileNames = [];
 
     if (extractedFiles.length > 0) {
-        const smallFiles = extractedFiles.filter(f => !f.isLarge);
-        const dbLargeFiles = extractedFiles.filter(f => f.isLarge && f.documentId);
-        const cacheLargeFiles = extractedFiles.filter(f => f.isLarge && !f.documentId && f.fileId);
-
-        let contextBlocks = [];
-
-        // 小文件：直接注入全文
-        for (const f of smallFiles) {
+        const contextBlocks = [];
+        for (const f of extractedFiles) {
             fileNames.push(f.name);
-            contextBlocks.push(`【附件: ${f.name}】\n\n${f.extractedText}`);
-        }
-
-        // 数据库大文件：批量向量检索（一次请求）
-        if (dbLargeFiles.length > 0) {
-            const docIds = dbLargeFiles.map(f => f.documentId);
-            for (const f of dbLargeFiles) fileNames.push(f.name);
-
-            try {
-                const resp = await fetch('/api/search_chunks', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        document_ids: docIds,
-                        query: text || ''
-                    })
-                });
-                const result = await resp.json();
-                if (result.success && result.context) {
-                    const fnames = dbLargeFiles.map(f => f.name).join('、');
-                    contextBlocks.push(`【附件: ${fnames} - 相关内容】\n\n${result.context}`);
-                } else {
-                    // 检索未返回结果，使用预览文本兜底
-                    const fallbackBlocks = dbLargeFiles
-                        .filter(f => f.preview)
-                        .map(f => `【附件: ${f.name} - 前3000字预览】\n\n${f.preview}`);
-                    if (fallbackBlocks.length > 0) {
-                        contextBlocks.push(...fallbackBlocks);
-                    } else {
-                        const fnames = dbLargeFiles.map(f => f.name).join('、');
-                        contextBlocks.push(`【附件: ${fnames} - 未能检索到相关内容，请尝试更具体的问题】`);
-                        showToast(`文件 ${fnames} 内容检索未返回结果`, 'warning');
-                    }
-                }
-            } catch (err) {
-                console.warn('批量分块检索失败:', err.message);
-                // 检索异常，使用预览文本兜底
-                const fallbackBlocks = dbLargeFiles
-                    .filter(f => f.preview)
-                    .map(f => `【附件: ${f.name} - 前3000字预览】\n\n${f.preview}`);
-                if (fallbackBlocks.length > 0) {
-                    contextBlocks.push(...fallbackBlocks);
-                } else {
-                    const fnames = dbLargeFiles.map(f => f.name).join('、');
-                    contextBlocks.push(`【附件: ${fnames} - 检索服务异常，请稍后重试】`);
-                    showToast(`文件 ${fnames} 内容检索失败: ${err.message}`, 'error');
-                }
+            if (f.extractedText) {
+                contextBlocks.push(`【附件: ${f.name}】\n\n${f.extractedText}`);
+            } else if (f.preview) {
+                contextBlocks.push(`【附件: ${f.name} - 预览】\n\n${f.preview}`);
             }
         }
-
-        // 内存缓存大文件：逐个检索（兼容旧逻辑）
-        for (const lf of cacheLargeFiles) {
-            fileNames.push(lf.name);
-            try {
-                const resp = await fetch('/api/search_chunks', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        file_id: lf.fileId,
-                        query: text || ''
-                    })
-                });
-                const result = await resp.json();
-                if (result.success && result.context) {
-                    contextBlocks.push(`【附件: ${lf.name} - 相关内容】\n\n${result.context}`);
-                } else if (lf.preview) {
-                    contextBlocks.push(`【附件: ${lf.name} - 前3000字预览】\n\n${lf.preview}`);
-                } else {
-                    contextBlocks.push(`【附件: ${lf.name} - 未能检索到相关内容，请尝试更具体的问题】`);
-                }
-            } catch (err) {
-                console.warn('分块检索失败:', err.message);
-                if (lf.preview) {
-                    contextBlocks.push(`【附件: ${lf.name} - 前3000字预览】\n\n${lf.preview}`);
-                } else {
-                    contextBlocks.push(`【附件: ${lf.name} - 检索服务异常，请稍后重试】`);
-                    showToast(`文件 ${lf.name} 内容检索失败: ${err.message}`, 'error');
-                }
-            }
-        }
-
-        // 拼合所有上下文
         if (contextBlocks.length > 0) {
             finalContent = contextBlocks.join('\n\n---\n\n') + '\n\n---\n\n' + (text || '');
         }

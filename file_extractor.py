@@ -287,6 +287,67 @@ def _build_result(text, filename, file_id=None, user_id=None, provider="", provi
 # 主入口
 # ============================================================
 
+def extract_text_only(file_storage):
+    """
+    聊天附件专用：只解析文件全文，不分块、不入库、不缓存。
+    返回 {"success": True, "text": ..., "filename": ...} 或错误。
+    """
+    filename = file_storage.filename
+    if not filename:
+        return {"success": False, "error": "文件名为空", "filename": ""}
+    if not is_supported(filename):
+        ext = os.path.splitext(filename)[1] or '(无扩展名)'
+        return {"success": False, "error": f"不支持的文件格式: {ext}", "filename": filename}
+
+    file_bytes = file_storage.read()
+    if len(file_bytes) > MAX_FILE_SIZE:
+        size_mb = len(file_bytes) / (1024 * 1024)
+        return {"success": False, "error": f"文件过大 ({size_mb:.1f}MB)", "filename": filename}
+    if len(file_bytes) == 0:
+        return {"success": False, "error": "文件为空", "filename": filename}
+
+    # 图片 → OCR
+    if is_image_file(filename):
+        if not is_ocr_available():
+            return {"success": False, "error": "OCR 引擎不可用", "filename": filename}
+        text = ocr_image_bytes(file_bytes, filename)
+        if not text.strip():
+            return {"success": False, "error": "OCR 未能识别出文字", "filename": filename}
+        return {"success": True, "text": text, "filename": filename}
+
+    # 其他文件 → 临时文件 + MarkItDown
+    temp_dir = tempfile.mkdtemp(prefix="llm_chat_")
+    temp_path = os.path.join(temp_dir, filename)
+    try:
+        with open(temp_path, "wb") as f:
+            f.write(file_bytes)
+
+        converter = _get_converter()
+        result = converter.convert_local(temp_path)
+        text = result.text_content or ""
+
+        # PDF 兜底：MarkItDown 结果为空时尝试 OCR
+        if not text.strip() and is_pdf_file(filename):
+            if is_ocr_available():
+                text = ocr_pdf_scanned(temp_path)
+
+        if not text.strip():
+            return {"success": False, "error": "文件解析结果为空", "filename": filename}
+
+        return {"success": True, "text": text, "filename": filename}
+    except Exception as e:
+        return {"success": False, "error": f"文件解析失败: {str(e)}", "filename": filename}
+    finally:
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            if os.path.exists(temp_dir):
+                os.rmdir(temp_dir)
+        except OSError:
+            pass
+
+
+
 def extract_and_cache_chunks(file_storage, user_id=None, provider="", provider_file_id="", upload_mode="local"):
     """
     解析文件并缓存分块结果。

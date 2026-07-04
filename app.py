@@ -50,7 +50,7 @@ from templates import (
     get_all_templates, get_template_by_id, create_template,
     update_template, delete_template, render_system_prompt, get_categories
 )
-from file_extractor import extract_from_file, is_supported, get_supported_extensions, extract_and_cache_chunks, search_cached_chunks
+from file_extractor import extract_from_file, is_supported, get_supported_extensions, extract_and_cache_chunks, search_cached_chunks, extract_text_only
 from cache_manager import get_exact_cache, get_semantic_cache, get_embedding, cache_stats, clear_all_caches, warmup_embedding_model
 from database import (
     create_conversation, get_user_conversations, get_conversation,
@@ -754,6 +754,32 @@ def generate_title():
 
 
 # ============================================================
+# 聊天附件上传（只解析全文，不分块）
+
+@app.route("/api/chat/upload", methods=["POST"])
+@login_required
+@limiter.limit("20 per minute")
+def chat_upload():
+    """聊天附件上传 — 只解析全文，不做分块/入库/缓存。知识库路径不受影响。"""
+    if 'file' not in request.files:
+        return jsonify({"error": "未找到文件"}), 400
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({"error": "文件名为空"}), 400
+
+    result = extract_text_only(file)
+    if result["success"]:
+        return jsonify({
+            "success": True,
+            "filename": result["filename"],
+            "extracted_text": result["text"],
+            "is_large": False,
+            "upload_mode": "local"
+        })
+    else:
+        return jsonify({"error": result["error"]}), 400
+
+
 # 文件上传 & 解析（MarkItDown 统一处理）
 # ============================================================
 
