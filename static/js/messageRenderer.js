@@ -472,12 +472,20 @@ async function sendMessage() {
 
     if (extractedFiles.length > 0) {
         const contextBlocks = [];
+        const MAX_FILE_TOKENS = 25000; // 保守的 token 预算，防止溢出上下文窗口
         for (const f of extractedFiles) {
             fileNames.push(f.name);
             if (f.extractedText) {
-                contextBlocks.push(`【附件: ${f.name}】\n\n${f.extractedText}`);
-            } else if (f.preview) {
-                contextBlocks.push(`【附件: ${f.name} - 预览】\n\n${f.preview}`);
+                let fileText = f.extractedText;
+                const fileTokens = estimateTokens(fileText);
+                if (fileTokens > MAX_FILE_TOKENS) {
+                    // 按比例截断，保留 95% 预算量作为安全余量
+                    const ratio = MAX_FILE_TOKENS / fileTokens * 0.95;
+                    const cutPos = Math.floor(fileText.length * ratio);
+                    fileText = fileText.slice(0, cutPos) + '\n\n[文件内容超出上下文预算，已截断，完整内容请上传至知识库使用检索]';
+                    showToast(`文件 ${f.name} 内容较长（约 ${fileTokens} tokens），已截断至约 ${MAX_FILE_TOKENS} tokens`, 'info');
+                }
+                contextBlocks.push(`【附件: ${f.name}】\n\n${fileText}`);
             }
         }
         if (contextBlocks.length > 0) {
