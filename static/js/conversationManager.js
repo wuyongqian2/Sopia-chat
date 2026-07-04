@@ -487,7 +487,8 @@ function updateTokenCounter() {
     total += estimateTokens(DOM.chatInput.value);
     DOM.tokenCounter.style.display = 'inline';
     DOM.tokenCount.textContent = total >= 1000 ? (total / 1000).toFixed(1) + 'K' : total;
-    const limit = 32000;
+    const provider = STATE.providers.find(p => p.key === STATE.activeProvider);
+    const limit = provider?.context_window || 32000;
     DOM.tokenCounter.className = 'token-counter ' +
         (total < limit * 0.5 ? 'safe' : total < limit * 0.8 ? 'warn' : 'danger');
 }
@@ -496,11 +497,33 @@ window.updateTokenCounter = updateTokenCounter;
 function prepareMessages(conv) {
     const maxMessages = STATE.settings.context_messages || 20;
     const allMessages = conv.messages.map(m => ({ role: m.role, content: m.content }));
-    if (allMessages.length <= maxMessages) return allMessages;
-    const firstUserIdx = allMessages.findIndex(m => m.role === 'user');
-    const firstMsg = firstUserIdx >= 0 ? [allMessages[firstUserIdx]] : [];
-    const recent = allMessages.slice(-maxMessages);
-    if (firstMsg.length > 0 && recent.some(m => m === firstMsg[0])) return recent;
-    return [...firstMsg, ...recent];
+
+    // 第一道防线：消息条数限制（保留现有逻辑）
+    let limited = allMessages;
+    if (allMessages.length > maxMessages) {
+        const firstUserIdx = allMessages.findIndex(m => m.role === 'user');
+        const firstMsg = firstUserIdx >= 0 ? [allMessages[firstUserIdx]] : [];
+        const recent = allMessages.slice(-maxMessages);
+        limited = firstMsg.length > 0 && recent.some(m => m === firstMsg[0]) ? recent : [...firstMsg, ...recent];
+    }
+
+    // 第二道防线：Token 总量限制（从最新消息往前取，直到预算用完）
+    const provider = STATE.providers.find(p => p.key === STATE.activeProvider);
+    const contextWindow = provider?.context_window || 32000;
+    const outputTokens = STATE.settings.max_tokens || 4096;
+    const tokenBudget = Math.floor((contextWindow - outputTokens) * 0.9);
+
+    let totalTokens = 0;
+    const tokenLimited = [];
+    for (let i = limited.length - 1; i >= 0; i--) {
+        const msgTokens = estimateTokens(limited[i].content || '');
+        if (totalTokens + msgTokens > tokenBudget && tokenLimited.length > 0) {
+            break;
+        }
+        totalTokens += msgTokens;
+        tokenLimited.unshift(limited[i]);
+    }
+
+    return tokenLimited;
 }
 window.prepareMessages = prepareMessages;

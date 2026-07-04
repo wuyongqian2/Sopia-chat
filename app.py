@@ -196,7 +196,8 @@ def get_providers():
             "auth_type": meta["auth_type"],
             "auth_fields": meta["auth_fields"],
             "configured": False,
-            "supports_native_upload": bool(meta.get("supports_native_upload"))
+            "supports_native_upload": bool(meta.get("supports_native_upload")),
+            "context_window": meta.get("context_window", 32000)
         }
         # 检查是否已配置
         provider_config = config.get("providers", {}).get(key, {})

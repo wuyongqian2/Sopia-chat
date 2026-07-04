@@ -472,7 +472,17 @@ async function sendMessage() {
 
     if (extractedFiles.length > 0) {
         const contextBlocks = [];
-        const MAX_FILE_TOKENS = 25000; // 保守的 token 预算，防止溢出上下文窗口
+        // 动态计算文件 token 预算（基于当前 provider 的上下文窗口）
+        const contextWindow = provider?.context_window || 32000;
+        const systemPromptTokens = 300;
+        const outputTokens = STATE.settings.max_tokens || 4096;
+        const historyTokens = conv.messages.length > 0
+            ? conv.messages.reduce((sum, m) => sum + estimateTokens(m.content || ''), 0)
+            : 0;
+        const MAX_FILE_TOKENS = Math.max(
+            4000,
+            Math.floor((contextWindow - systemPromptTokens - outputTokens - historyTokens) * 0.8)
+        );
         for (const f of extractedFiles) {
             fileNames.push(f.name);
             if (f.extractedText) {
