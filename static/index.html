@@ -110,7 +110,7 @@
                     <button class="btn-template" id="btn-template" title="Prompt 模板">⚡</button>
                     <button class="btn-upload" id="btn-upload" title="上传文件（图片/PDF/文档）">📎</button>
                     <button class="btn-native-upload" id="btn-native-upload" title="本地解析上传" style="display:none">☁️</button>
-                    <button class="btn-kb-toggle" id="btn-kb-toggle" title="自动检索知识库（已开启）">📚</button>
+                    <button class="btn-kb-toggle" id="btn-kb-toggle" title="自动检索知识库（已关闭）">🔍</button>
                     <div style="flex:1;position:relative;">
                         <textarea
                             id="chat-input"
@@ -256,12 +256,6 @@
                 <div class="doc-search-bar">
                     <input type="text" id="doc-search-input" placeholder="🔍 搜索所有文档内容（语义检索）..."
                            class="doc-search-input">
-                    <select id="doc-search-topk" class="doc-search-topk">
-                        <option value="5">Top 5</option>
-                        <option value="10" selected>Top 10</option>
-                        <option value="20">Top 20</option>
-                        <option value="50">Top 50</option>
-                    </select>
                     <button class="btn-primary" id="btn-doc-search">搜索</button>
                 </div>
                 <!-- 搜索结果 -->

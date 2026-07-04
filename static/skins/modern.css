@@ -174,24 +174,6 @@ body {
 }
 
 /* 知识库弹窗下拉菜单适配 */
-.doc-search-topk {
-    color-scheme: dark;
-}
-
-.doc-search-topk option {
-    background-color: var(--bg-tertiary);
-    color: var(--text-primary);
-}
-
-[data-theme="light"] .doc-search-topk {
-    color-scheme: light;
-}
-
-[data-theme="light"] .doc-search-topk option {
-    background-color: #ffffff;
-    color: #1a1d23;
-}
-
 .provider-info {
     margin-top: 10px;
     font-size: var(--text-tiny);

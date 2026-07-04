@@ -1555,36 +1555,6 @@ body {
     border-color: var(--accent);
 }
 
-.doc-search-topk {
-    padding: 10px 12px;
-    border: 1px solid var(--border-input);
-    border-radius: var(--radius-xs);
-    background: var(--bg-input);
-    color: var(--text-primary);
-    font-size: 13px;
-    cursor: pointer;
-    color-scheme: dark;
-}
-
-.doc-search-topk option {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-}
-
-[data-theme="light"] .doc-search-topk {
-    color-scheme: light;
-}
-
-[data-theme="light"] .doc-search-topk option {
-    background-color: #ffffff;
-    color: #1e293b;
-}
-
-.doc-search-topk:focus {
-    outline: none;
-    border-color: var(--accent);
-}
-
 /* 搜索结果 */
 .doc-search-results {
     display: none;
@@ -2039,10 +2009,6 @@ body {
     }
 
     .doc-search-input {
-        width: 100%;
-    }
-
-    .doc-search-topk {
         width: 100%;
     }
 

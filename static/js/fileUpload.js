@@ -250,10 +250,7 @@ async function searchAllDocuments(page) {
         return;
     }
 
-    // 读取 top_k 选择器
-    const topKEl = document.getElementById('doc-search-topk');
-    if (topKEl) _searchTopK = parseInt(topKEl.value) || 10;
-
+    // top_k 固定为 10（不暴露给用户）
     const resultsEl = document.getElementById('doc-search-results');
     resultsEl.style.display = 'block';
     resultsEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);">搜索中...</div>';
