@@ -35,7 +35,7 @@ PROVIDERS = {
         "name": "DeepSeek",
         "base_url": "https://api.deepseek.com/v1",
         "models": ["deepseek-v4-pro", "deepseek-v4-flash"],
-        "context_window": 131072,
+        "context_window": 1048565,
         "auth_type": "bearer",
         "auth_fields": ["api_key"],
         "default_model": "deepseek-v4-pro",

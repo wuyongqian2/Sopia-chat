@@ -58,6 +58,27 @@ from database import (
 )
 from auth import init_auth, auth_bp
 
+# ============================================================
+# Token 估算工具（与前端 estimateTokens 保持一致）
+# ============================================================
+import re
+
+def estimate_tokens(text: str) -> int:
+    """
+    估算文本的 token 数量（与前端逻辑一致）
+    - CJK 字符：~2 tokens/字
+    - 英文单词：~1.3 tokens/词
+    - 数字：~0.5 tokens/组
+    - 其他：~0.5 tokens/字符
+    """
+    if not text:
+        return 0
+    cjk = len(re.findall(r'[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]', text))
+    words = len(re.findall(r'[a-zA-Z]+', text))
+    digits = len(re.findall(r'[0-9]+', text))
+    other = max(0, len(text) - cjk - len(re.findall(r'[a-zA-Z]', text)) - len(re.findall(r'[0-9]', text)))
+    return int(cjk * 2 + words * 1.3 + digits * 0.5 + other * 0.5 + 0.99)  # 向上取整
+
 # 持久化 secret_key，避免每次重启后用户登录态失效
 def _get_or_create_secret_key():
     config_dir = os.path.join(os.path.expanduser("~"), ".workbuddy")
@@ -436,20 +457,20 @@ def chat():
 
         # ---- 后端安全网：检查消息总量，防止超出模型上下文窗口 ----
         context_window = PROVIDERS[provider_key].get("context_window", 32000)
-        total_chars = sum(len(m.get("content", "")) for m in messages if isinstance(m.get("content"), str))
-        # 粗略估算：中文 ~1.5 token/字，英文 ~0.25 token/字符，取中间值 ~1 token/字符
-        estimated_tokens = int(total_chars * 1.2)
+        # 使用精确估算（与前端一致）
+        estimated_tokens = sum(estimate_tokens(m.get("content", "")) for m in messages if isinstance(m.get("content"), str))
         if estimated_tokens > context_window:
             # 从最旧的消息开始丢弃，直到估算 token 数在预算内
             budget = int(context_window * 0.85)
             while len(messages) > 1 and estimated_tokens > budget:
                 removed = messages.pop(0)
-                removed_chars = len(removed.get("content", "")) if isinstance(removed.get("content"), str) else 0
-                estimated_tokens -= int(removed_chars * 1.2)
+                removed_tokens = estimate_tokens(removed.get("content", "")) if isinstance(removed.get("content"), str) else 0
+                estimated_tokens -= removed_tokens
             # 如果单条消息仍然超大，截断它
             if estimated_tokens > budget and messages and isinstance(messages[-1].get("content"), str):
                 content = messages[-1]["content"]
-                max_chars = int(budget / 1.2)
+                # 按字符截断（假设平均 1.5 tokens/字符用于中文，2 tokens/字符用于英文）
+                max_chars = int(budget / 1.5)
                 messages[-1]["content"] = content[:max_chars] + "\n\n[上下文过长，已自动截断]"
             logger.warning("消息总量(%d tokens)超出预算(%d)，已自动裁剪", estimated_tokens, budget)
 
