@@ -516,12 +516,26 @@ function prepareMessages(conv) {
     let totalTokens = 0;
     const tokenLimited = [];
     for (let i = limited.length - 1; i >= 0; i--) {
-        const msgTokens = estimateTokens(limited[i].content || '');
+        let msgTokens = estimateTokens(limited[i].content || '');
+        let content = limited[i].content || '';
+
+        // 第三道防线：单条消息超出预算时，截断内容
+        if (msgTokens > tokenBudget && tokenLimited.length === 0) {
+            // 这是最新的一条消息（通常是带知识库上下文的用户消息），截断到预算内
+            const ratio = (tokenBudget * 0.9) / msgTokens;
+            const cutPos = Math.max(200, Math.floor(content.length * ratio));
+            content = content.slice(0, cutPos) + '\n\n[上下文过长，已自动截断]';
+            msgTokens = estimateTokens(content);
+            totalTokens += msgTokens;
+            tokenLimited.unshift({ role: limited[i].role, content: content });
+            continue;
+        }
+
         if (totalTokens + msgTokens > tokenBudget && tokenLimited.length > 0) {
             break;
         }
         totalTokens += msgTokens;
-        tokenLimited.unshift(limited[i]);
+        tokenLimited.unshift({ role: limited[i].role, content: content });
     }
 
     return tokenLimited;

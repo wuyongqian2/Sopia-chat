@@ -434,6 +434,25 @@ def chat():
         config = load_config()
         adapter = get_adapter(provider_key, config)
 
+        # ---- 后端安全网：检查消息总量，防止超出模型上下文窗口 ----
+        context_window = PROVIDERS[provider_key].get("context_window", 32000)
+        total_chars = sum(len(m.get("content", "")) for m in messages if isinstance(m.get("content"), str))
+        # 粗略估算：中文 ~1.5 token/字，英文 ~0.25 token/字符，取中间值 ~1 token/字符
+        estimated_tokens = int(total_chars * 1.2)
+        if estimated_tokens > context_window:
+            # 从最旧的消息开始丢弃，直到估算 token 数在预算内
+            budget = int(context_window * 0.85)
+            while len(messages) > 1 and estimated_tokens > budget:
+                removed = messages.pop(0)
+                removed_chars = len(removed.get("content", "")) if isinstance(removed.get("content"), str) else 0
+                estimated_tokens -= int(removed_chars * 1.2)
+            # 如果单条消息仍然超大，截断它
+            if estimated_tokens > budget and messages and isinstance(messages[-1].get("content"), str):
+                content = messages[-1]["content"]
+                max_chars = int(budget / 1.2)
+                messages[-1]["content"] = content[:max_chars] + "\n\n[上下文过长，已自动截断]"
+            logger.warning("消息总量(%d tokens)超出预算(%d)，已自动裁剪", estimated_tokens, budget)
+
         # 提取用户最后一条消息（用于缓存查询）
         user_question = ""
         for msg in reversed(messages):

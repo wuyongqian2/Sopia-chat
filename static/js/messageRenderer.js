@@ -514,14 +514,45 @@ async function sendMessage() {
             });
             const data = await resp.json();
             if (data.results && data.results.length > 0) {
-                const kbBlocks = data.results.map(r => {
+                // 动态计算知识库上下文 token 预算（与文件附件共用逻辑）
+                const contextWindow = provider?.context_window || 32000;
+                const systemPromptTokens = 300;
+                const outputTokens = STATE.settings.max_tokens || 4096;
+                const historyTokens = conv.messages.length > 0
+                    ? conv.messages.reduce((sum, m) => sum + estimateTokens(m.content || ''), 0)
+                    : 0;
+                const MAX_KB_TOKENS = Math.max(
+                    4000,
+                    Math.floor((contextWindow - systemPromptTokens - outputTokens - historyTokens) * 0.6)
+                );
+
+                const kbBlocks = [];
+                let kbTokens = 0;
+                for (const r of data.results) {
                     const filename = r.filename || '未知文件';
                     const score = r.score ? ` (相关度: ${(r.score * 100).toFixed(0)}%)` : '';
-                    return `【知识库: ${filename}${score}】\n\n${r.text}`;
-                });
-                finalContent = kbBlocks.join('\n\n---\n\n') + '\n\n---\n\n' + (text || '');
-                fileNames.push('知识库自动检索');
-                showToast(`已从知识库检索到 ${data.results.length} 条相关内容`, 'info');
+                    const blockText = `【知识库: ${filename}${score}】\n\n${r.text}`;
+                    const blockTokens = estimateTokens(blockText);
+
+                    if (kbTokens + blockTokens > MAX_KB_TOKENS && kbBlocks.length > 0) {
+                        // 超出预算，截断当前块并停止添加更多
+                        const remainingTokens = MAX_KB_TOKENS - kbTokens;
+                        if (remainingTokens > 200) {
+                            const ratio = remainingTokens / blockTokens * 0.95;
+                            const cutPos = Math.floor(blockText.length * ratio);
+                            kbBlocks.push(blockText.slice(0, cutPos) + '\n\n[内容已截断]');
+                        }
+                        break;
+                    }
+                    kbBlocks.push(blockText);
+                    kbTokens += blockTokens;
+                }
+
+                if (kbBlocks.length > 0) {
+                    finalContent = kbBlocks.join('\n\n---\n\n') + '\n\n---\n\n' + (text || '');
+                    fileNames.push('知识库自动检索');
+                    showToast(`已从知识库检索到 ${data.results.length} 条相关内容`, 'info');
+                }
             }
         } catch (err) {
             console.warn('知识库自动检索失败:', err.message);
