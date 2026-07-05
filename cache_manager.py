@@ -319,11 +319,11 @@ class LocalEmbeddingModel:
             return []
         self._ensure_loading()
         if self._loaded and self._session is not None:
-            return self._run_inference(text[:2000])
+            return self._run_inference_long(text[:8000])
         if self._loading:
             self._ready.wait(timeout=timeout)
             if self._loaded and self._session is not None:
-                return self._run_inference(text[:2000])
+                return self._run_inference_long(text[:8000])
         return []
     
     def _run_inference(self, text: str) -> list:
@@ -351,6 +351,44 @@ class LocalEmbeddingModel:
             print(f'[Cache] ONNX inference failed: {e}')
             return []
     
+    def _run_inference_long(self, text: str) -> list:
+        '''
+        对长文本采用滑动窗口编码 + 均值池化。
+        将文本按 1800 字符切分（留 200 字符重叠），分别编码后取均值。
+        '''
+        import numpy as np
+
+        MAX_LEN = 2000
+        OVERLAP = 200
+        STEP = MAX_LEN - OVERLAP  # 1800
+
+        if len(text) <= MAX_LEN:
+            return self._run_inference(text)
+
+        segments = []
+        start = 0
+        while start < len(text):
+            end = min(start + MAX_LEN, len(text))
+            segments.append(text[start:end])
+            if end >= len(text):
+                break
+            start += STEP
+
+        vectors = []
+        for seg in segments:
+            vec = self._run_inference(seg)
+            if vec:
+                vectors.append(np.array(vec, dtype=np.float32))
+
+        if not vectors:
+            return []
+
+        mean_vec = np.mean(vectors, axis=0)
+        norm = np.linalg.norm(mean_vec)
+        if norm > 0:
+            mean_vec = mean_vec / norm
+        return mean_vec.tolist()
+    
     def encode_batch(self, texts: list, batch_size: int = 32) -> list:
         '''Batch encode multiple texts.'''
         if not texts:
@@ -361,7 +399,7 @@ class LocalEmbeddingModel:
         try:
             import numpy as np
             results = []
-            truncated = [t[:2000] if t else '' for t in texts]
+            truncated = [t[:8000] if t else '' for t in texts]
             for i in range(0, len(truncated), batch_size):
                 batch = truncated[i:i+batch_size]
                 encodings = [self._tokenizer.encode(t) for t in batch]
@@ -379,7 +417,18 @@ class LocalEmbeddingModel:
                 norms = np.where(norms == 0, 1, norms)
                 cls_embs = cls_embs / norms
                 results.extend(cls_embs.tolist())
-            return results
+            # 对长文本使用滑动窗口均值池化（单条处理）
+            final_results = []
+            for i, text in enumerate(truncated):
+                if len(text) > 2000 and i < len(results):
+                    long_vec = self._run_inference_long(text)
+                    if long_vec:
+                        final_results.append(long_vec)
+                    else:
+                        final_results.append(results[i])
+                else:
+                    final_results.append(results[i] if i < len(results) else [])
+            return final_results
         except Exception as e:
             print(f'[Cache] Batch ONNX inference failed: {e}')
             return [[] for _ in texts]

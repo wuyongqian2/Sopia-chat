@@ -983,7 +983,7 @@ def remove_document(doc_id):
 @login_required
 @limiter.limit("20 per minute")
 def search_all_documents():
-    """跨文档语义搜索：在所有已上传文档中检索相关内容"""
+    """跨文档混合搜索：FAISS 语义检索 + FTS5 全文检索 + RRF 融合"""
     try:
         data = request.json or {}
         query = (data.get("query") or "").strip()[:500]
@@ -996,7 +996,7 @@ def search_all_documents():
         except (TypeError, ValueError):
             top_k = 5
 
-        from database import get_user_documents, search_chunks_by_embedding
+        from database import get_user_documents, search_chunks_hybrid
         from cache_manager import get_embedding
 
         # 获取用户所有文档ID
@@ -1004,26 +1004,16 @@ def search_all_documents():
         doc_ids = [d["id"] for d in docs]
         if not doc_ids:
             return jsonify({"results": [], "message": "暂无已上传的文档"})
+
         query_vector = get_embedding(query)
 
-        if query_vector:
-            results = search_chunks_by_embedding(query_vector, document_ids=doc_ids, top_k=top_k)
-        else:
-            results = []
-
-        # 向量检索无结果时，回退到关键词匹配（兼容 embedding 为 NULL 的旧数据）
-        if not results:
-            from database import get_chunks_by_document
-            from chunker import match_chunks
-            all_chunks = []
-            for did in doc_ids:
-                chunks = get_chunks_by_document(did)
-                for c in chunks:
-                    c["_document_id"] = did
-                all_chunks.extend(chunks)
-            results = match_chunks(all_chunks, query)
-            for r in results:
-                r["document_id"] = r.pop("_document_id", "")
+        # 混合检索：同时传入原始文本和向量
+        results = search_chunks_hybrid(
+            query_text=query,
+            query_vector=query_vector,
+            document_ids=doc_ids,
+            top_k=top_k
+        )
 
         # 补充文件名
         doc_map = {d["id"]: d["filename"] for d in docs}
@@ -1078,6 +1068,14 @@ if __name__ == "__main__":
         warmup_embedding_model()
     except Exception as e:
         logger.warning("[Cache] Embedding 模型不可用，L2 语义缓存已禁用: %s", e)
+
+    # 加载 FAISS 向量索引（可选，失败不影响主功能）
+    try:
+        from vector_store import init_vector_store
+        logger.info("[VectorStore] 正在加载 FAISS 索引...")
+        init_vector_store()
+    except Exception as e:
+        logger.warning("[VectorStore] FAISS 索引加载失败，使用降级模式: %s", e)
 
     # MAX_CONTENT_LENGTH 已在模块顶部通过 MAX_UPLOAD_SIZE 统一配置
 
